@@ -5,3 +5,164 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+enum UserRole {
+  CUSTOMER
+  ADMIN
+}
+
+enum TourStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum BookingStatus {
+  CONFIRMED
+  CANCELLED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  firstName    String
+  lastName     String
+  role         UserRole @default(CUSTOMER)
+  isActive     Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cart              Cart?
+  bookings          Booking[]
+  passwordResetOtps PasswordResetOtp[]
+
+  @@index([role])
+}
+
+model Tour {
+  id           String     @id @default(cuid())
+  title        String
+  slug         String     @unique
+  description  String
+  location     String
+  price        Decimal    @db.Decimal(12, 2)
+  durationDays Int
+  status       TourStatus @default(DRAFT)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  images    TourImage[]
+  tags      TourTag[]
+  cartItems CartItem[]
+  bookings  Booking[]
+
+  @@index([status])
+  @@index([location])
+  @@index([price])
+}
+
+model TourImage {
+  id        String  @id @default(cuid())
+  url       String
+  altText   String?
+  sortOrder Int     @default(0)
+
+  tourId String
+  tour   Tour   @relation(fields: [tourId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([tourId])
+}
+
+model Tag {
+  id   String @id @default(cuid())
+  name String @unique
+  slug String @unique
+
+  tours TourTag[]
+}
+
+model TourTag {
+  tourId String
+  tagId  String
+
+  tour Tour @relation(fields: [tourId], references: [id], onDelete: Cascade)
+  tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([tourId, tagId])
+  @@index([tagId])
+}
+
+model Cart {
+  id String @id @default(cuid())
+
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  item CartItem?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model CartItem {
+  id String @id @default(cuid())
+
+  cartId String @unique
+  cart   Cart   @relation(fields: [cartId], references: [id], onDelete: Cascade)
+
+  tourId String
+  tour   Tour   @relation(fields: [tourId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([tourId])
+}
+
+model Booking {
+  id     String        @id @default(cuid())
+  status BookingStatus @default(CONFIRMED)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  tourId String?
+  tour   Tour?   @relation(fields: [tourId], references: [id], onDelete: SetNull)
+
+  tourTitleSnapshot    String
+  tourLocationSnapshot String
+  tourPriceSnapshot    Decimal @db.Decimal(12, 2)
+  durationDaysSnapshot Int
+
+  customerFirstName String
+  customerLastName  String
+  customerEmail     String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([tourId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model PasswordResetOtp {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  otpHash   String
+  expiresAt DateTime
+  usedAt    DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
