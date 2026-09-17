@@ -9,6 +9,7 @@ import { UserModule } from './user/user.module.js';
 import Joi from 'joi';
 import { LoggerMiddleware } from './middleware/logger.middleware.js';
 import { ToursModule } from './tours/tours.module.js';
+import { CartModule } from './cart/cart.module.js';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { ToursModule } from './tours/tours.module.js';
     AuthModule,
     UserModule,
     ToursModule,
+    CartModule,
   ],
   controllers: [AppController],
   providers: [AppService],
