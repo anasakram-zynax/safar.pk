@@ -10,6 +10,7 @@ import Joi from 'joi';
 import { LoggerMiddleware } from './middleware/logger.middleware.js';
 import { ToursModule } from './tours/tours.module.js';
 import { CartModule } from './cart/cart.module.js';
+import { BookingsModule } from './bookings/bookings.module.js';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { CartModule } from './cart/cart.module.js';
     UserModule,
     ToursModule,
     CartModule,
+    BookingsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
