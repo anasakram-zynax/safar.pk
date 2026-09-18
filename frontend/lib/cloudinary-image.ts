@@ -1,4 +1,6 @@
-export function isAllowedCloudinaryImage(value: string | undefined): value is string {
+export function isAllowedCloudinaryImage(
+  value: string | undefined,
+): value is string {
   const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
   if (!value || !cloudName || !/^[a-zA-Z0-9_-]+$/.test(cloudName)) return false;
 

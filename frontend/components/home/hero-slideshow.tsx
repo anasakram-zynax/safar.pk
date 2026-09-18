@@ -18,7 +18,12 @@ export function HeroSlideshow({ slides }: { slides: HeroSlide[] }) {
   useEffect(() => {
     if (reducedMotion || slides.length < 2) return;
     const timer = window.setInterval(
-      () => setPosition((current) => (current + 1 + Math.floor(Math.random() * (slides.length - 1))) % slides.length),
+      () =>
+        setPosition(
+          (current) =>
+            (current + 1 + Math.floor(Math.random() * (slides.length - 1))) %
+            slides.length,
+        ),
       6500,
     );
     return () => window.clearInterval(timer);

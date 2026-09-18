@@ -101,7 +101,7 @@ export default function Home() {
             </StaggerItem>
           </StaggerContainer>
           <SlideUp delay={0.1} className="relative">
-            <div className="relative aspect-[5/4] overflow-hidden rounded-[1.75rem] border border-white/70 bg-surface-muted shadow-[0_30px_70px_-35px_rgba(23,43,66,.35)] sm:aspect-[6/5] lg:aspect-[5/5]">
+            <div className="relative aspect-5/4 overflow-hidden rounded-[1.75rem] border border-white/70 bg-surface-muted shadow-[0_30px_70px_-35px_rgba(23,43,66,.35)] sm:aspect-6/5 lg:aspect-5/5">
               <Suspense fallback={<HeroImageFallback />}>
                 <HeroImage toursPromise={toursPromise} />
               </Suspense>
@@ -242,8 +242,10 @@ export default function Home() {
       >
         <Container className="grid items-center gap-10 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,.9fr)] lg:gap-16">
           <SlideUp>
-            <div className="relative aspect-[5/4] overflow-hidden rounded-[1.75rem] bg-surface shadow-[0_22px_55px_-35px_rgba(23,43,66,.3)] sm:aspect-[6/4]">
-              <Suspense fallback={<div className="absolute inset-0 bg-surface-muted" />}>
+            <div className="relative aspect-5/4 overflow-hidden rounded-[1.75rem] bg-surface shadow-[0_22px_55px_-35px_rgba(23,43,66,.3)] sm:aspect-6/4">
+              <Suspense
+                fallback={<div className="absolute inset-0 bg-surface-muted" />}
+              >
                 <BeyondImage toursPromise={toursPromise} />
               </Suspense>
             </div>
@@ -294,7 +296,7 @@ export default function Home() {
       <Section aria-labelledby="final-cta-title">
         <Container>
           <SlideUp>
-            <div className="relative overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-[#2869bd] to-[#288cae] px-6 py-14 text-white sm:px-12 sm:py-16 lg:px-16">
+            <div className="relative overflow-hidden rounded-[1.75rem] bg-linear-to-br from-[#2869bd] to-[#288cae] px-6 py-14 text-white sm:px-12 sm:py-16 lg:px-16">
               <MountainSnow
                 className="absolute -bottom-16 -right-10 size-64 text-white/10 sm:size-80"
                 strokeWidth={0.7}
