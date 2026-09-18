@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { ApiError, apiRequest } from "@/lib/api/client";
 import type { ApiResponse } from "@/types/api";
 import type { LoginData, LoginPayload } from "@/types/auth";
+import { postLoginPath } from "@/lib/auth/next-path";
 
 export function LoginForm({
   next,
@@ -47,7 +48,7 @@ export function LoginForm({
       )
         throw new Error("Invalid login response");
       auth.signIn(response.data.accessToken, response.data.user);
-      router.replace(next);
+      router.replace(postLoginPath(response.data.user.role, next));
     } catch (caught) {
       setError(
         caught instanceof ApiError && caught.status === 401

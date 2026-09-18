@@ -21,6 +21,8 @@ import { ToursService } from './tours.service.js';
 import { TourQueryDto } from './dto/tour-query.dto.js';
 import { UpdateTourDto } from './dto/update-tour.dto.js';
 import { UploadTourImageDto } from './dto/upload-tour-image.dto.js';
+import { ReorderTourImagesDto } from './dto/reorder-tour-images.dto.js';
+import { UpdateTourImageDto } from './dto/update-tour-image.dto.js';
 
 @Controller('tours')
 export class ToursController {
@@ -61,6 +63,20 @@ export class ToursController {
     const data = await this.toursService.findBySlug(slug);
 
     return data;
+  }
+
+  @Patch(':tourId/images/reorder')
+  @UseGuards(AuthGuard, RoleGuard)
+  @Roles(UserRole.ADMIN)
+  async reorderImages(@Param('tourId') tourId: string, @Body() dto: ReorderTourImagesDto) {
+    return this.toursService.reorderImages(tourId, dto.imageIds);
+  }
+
+  @Patch(':tourId/images/:imageId')
+  @UseGuards(AuthGuard, RoleGuard)
+  @Roles(UserRole.ADMIN)
+  async updateImage(@Param('tourId') tourId: string, @Param('imageId') imageId: string, @Body() dto: UpdateTourImageDto) {
+    return this.toursService.updateImageAltText(tourId, imageId, dto.altText);
   }
 
   @Patch(':id')

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { Menu, ShoppingCart, X } from "lucide-react";
+import { LayoutDashboard, Menu, ShoppingCart, X } from "lucide-react";
 import { Brand } from "@/components/common/brand";
 import { useAuth } from "@/components/auth/auth-provider";
 import { buttonClassName } from "@/components/ui/button";
@@ -173,6 +173,12 @@ export function Navbar() {
             <CartLink pathname={pathname} count={cartCount} />
           )}
           {auth.status === "customer" && <BookingsLink pathname={pathname} />}
+          {auth.status === "admin" && (
+            <Link href="/admin" className={buttonClassName({ variant: "outline", size: "sm" })}>
+              <LayoutDashboard size={16} aria-hidden="true" />
+              Admin Dashboard
+            </Link>
+          )}
           {authenticated ? (
             <>
               <span
@@ -278,6 +284,19 @@ export function Navbar() {
                   mobile
                   onClick={() => setMenuOpen(false)}
                 />
+              )}
+              {auth.status === "admin" && (
+                <Link
+                  href="/admin"
+                  onClick={() => setMenuOpen(false)}
+                  className={buttonClassName({
+                    variant: "outline",
+                    className: "mt-2 w-full",
+                  })}
+                >
+                  <LayoutDashboard size={16} aria-hidden="true" />
+                  Admin Dashboard
+                </Link>
               )}
               {authenticated ? (
                 <>
