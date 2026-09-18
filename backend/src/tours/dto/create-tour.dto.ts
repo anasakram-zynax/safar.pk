@@ -1,5 +1,4 @@
 import { TourStatus } from '@prisma/client';
-import { Type } from 'class-transformer';
 import {
   IsArray,
   IsEnum,
@@ -8,26 +7,9 @@ import {
   IsNumber,
   IsOptional,
   IsString,
-  IsUrl,
   MaxLength,
   Min,
-  ValidateNested,
 } from 'class-validator';
-
-class CreateTourImageDto {
-  @IsUrl()
-  url: string;
-
-  @IsOptional()
-  @IsString()
-  @MaxLength(255)
-  altText?: string;
-
-  @IsOptional()
-  @IsInt()
-  @Min(0)
-  sortOrder?: number;
-}
 
 export class CreateTourDto {
   @IsString()
@@ -60,10 +42,4 @@ export class CreateTourDto {
   @IsArray()
   @IsString({ each: true })
   tagIds?: string[];
-
-  @IsOptional()
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => CreateTourImageDto)
-  images?: CreateTourImageDto[];
 }

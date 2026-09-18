@@ -67,6 +67,7 @@ model Tour {
 model TourImage {
   id        String  @id @default(cuid())
   url       String
+  publicId  String? @unique
   altText   String?
   sortOrder Int     @default(0)
 

@@ -31,6 +31,10 @@ import { BookingsModule } from './bookings/bookings.module.js';
         JWT_SECRET: Joi.string().min(32).required(),
 
         JWT_EXPIRES_IN: Joi.string().default('1h'),
+
+        CLOUDINARY_CLOUD_NAME: Joi.string().trim().required(),
+        CLOUDINARY_API_KEY: Joi.string().trim().required(),
+        CLOUDINARY_API_SECRET: Joi.string().trim().required(),
       }),
     }),
     HealthModule,

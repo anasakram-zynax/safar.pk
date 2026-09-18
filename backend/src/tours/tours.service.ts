@@ -1,7 +1,8 @@
 import {
   BadRequestException,
-  ConflictException,
   Injectable,
+  InternalServerErrorException,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
@@ -10,10 +11,46 @@ import { generateSlug } from './utils/slug.utils.js';
 import { TourQueryDto } from './dto/tour-query.dto.js';
 import { Prisma, TourStatus } from '@prisma/client';
 import { UpdateTourDto } from './dto/update-tour.dto.js';
+import { CloudinaryService } from '../cloudinary/cloudinary.service.js';
+
+const MAX_TOUR_IMAGE_BYTES = 5 * 1024 * 1024;
+
+function isSupportedImage(file: Express.Multer.File): boolean {
+  const bytes = file.buffer;
+  if (file.mimetype === 'image/jpeg') {
+    return (
+      bytes.length >= 3 &&
+      bytes[0] === 0xff &&
+      bytes[1] === 0xd8 &&
+      bytes[2] === 0xff
+    );
+  }
+  if (file.mimetype === 'image/png') {
+    return (
+      bytes.length >= 8 &&
+      bytes
+        .subarray(0, 8)
+        .equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))
+    );
+  }
+  if (file.mimetype === 'image/webp') {
+    return (
+      bytes.length >= 12 &&
+      bytes.toString('ascii', 0, 4) === 'RIFF' &&
+      bytes.toString('ascii', 8, 12) === 'WEBP'
+    );
+  }
+  return false;
+}
 
 @Injectable()
 export class ToursService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(ToursService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly cloudinary: CloudinaryService,
+  ) {}
 
   async create(createTourDto: CreateTourDto) {
     const slug = await this.createUniqueSlug(createTourDto.title);
@@ -27,12 +64,6 @@ export class ToursService {
         price: createTourDto.price,
         durationDays: createTourDto.durationDays,
         status: createTourDto.status,
-
-        images: createTourDto.images
-          ? {
-              create: createTourDto.images,
-            }
-          : undefined,
 
         tags: createTourDto.tagIds
           ? {
@@ -60,6 +91,69 @@ export class ToursService {
         },
       },
     });
+  }
+
+  async uploadImage(
+    id: string,
+    file: Express.Multer.File | undefined,
+    altText?: string,
+  ) {
+    const tour = await this.prisma.tour.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+    if (!tour) throw new NotFoundException('Tour not found.');
+    if (!file?.buffer || file.size === 0)
+      throw new BadRequestException('An image file is required.');
+    if (file.size > MAX_TOUR_IMAGE_BYTES)
+      throw new BadRequestException('Image must be 5 MB or smaller.');
+    if (!isSupportedImage(file))
+      throw new BadRequestException(
+        'Only JPEG, PNG, and WebP images are allowed.',
+      );
+
+    const lastImage = await this.prisma.tourImage.findFirst({
+      where: { tourId: id },
+      orderBy: { sortOrder: 'desc' },
+      select: { sortOrder: true },
+    });
+    const uploaded = await this.cloudinary.uploadTourImage(file.buffer);
+    try {
+      return await this.prisma.tourImage.create({
+        data: {
+          tourId: id,
+          url: uploaded.url,
+          publicId: uploaded.publicId,
+          altText: altText?.trim() || null,
+          sortOrder: (lastImage?.sortOrder ?? -1) + 1,
+        },
+      });
+    } catch (error) {
+      try {
+        await this.cloudinary.deleteImage(uploaded.publicId);
+      } catch (cleanupError) {
+        this.logger.error(
+          'Image metadata save and Cloudinary cleanup both failed',
+          cleanupError,
+        );
+        throw new InternalServerErrorException(
+          'Image could not be saved and storage cleanup failed.',
+        );
+      }
+      throw error;
+    }
+  }
+
+  async removeImage(tourId: string, imageId: string) {
+    const image = await this.prisma.tourImage.findFirst({
+      where: { id: imageId, tourId },
+      select: { id: true, publicId: true },
+    });
+    if (!image) throw new NotFoundException('Tour image not found.');
+
+    if (image.publicId) await this.cloudinary.deleteImage(image.publicId);
+    await this.prisma.tourImage.delete({ where: { id: image.id } });
+    return { id: image.id };
   }
 
   private async createUniqueSlug(
@@ -350,13 +444,6 @@ export class ToursService {
           status: updateTourDto.status,
         }),
 
-        ...(updateTourDto.images !== undefined && {
-          images: {
-            deleteMany: {},
-            create: updateTourDto.images,
-          },
-        }),
-
         ...(updateTourDto.tagIds !== undefined && {
           tags: {
             deleteMany: {},
@@ -393,11 +480,16 @@ export class ToursService {
       select: {
         id: true,
         title: true,
+        images: { select: { publicId: true } },
       },
     });
 
     if (!tour) {
       throw new NotFoundException('Tour not found.');
+    }
+
+    for (const image of tour.images) {
+      if (image.publicId) await this.cloudinary.deleteImage(image.publicId);
     }
 
     await this.prisma.tour.delete({

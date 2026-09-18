@@ -7,8 +7,11 @@ import {
   Patch,
   Post,
   Query,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { AuthGuard } from '../guard/auth.guard.js';
 import { RoleGuard } from '../guard/role.guard.js';
 import { UserRole } from '@prisma/client';
@@ -17,6 +20,7 @@ import { CreateTourDto } from './dto/create-tour.dto.js';
 import { ToursService } from './tours.service.js';
 import { TourQueryDto } from './dto/tour-query.dto.js';
 import { UpdateTourDto } from './dto/update-tour.dto.js';
+import { UploadTourImageDto } from './dto/upload-tour-image.dto.js';
 
 @Controller('tours')
 export class ToursController {
@@ -29,6 +33,20 @@ export class ToursController {
     const data = await this.toursService.create(createTourDto);
 
     return data;
+  }
+
+  @Post(':id/images')
+  @UseGuards(AuthGuard, RoleGuard)
+  @Roles(UserRole.ADMIN)
+  @UseInterceptors(
+    FileInterceptor('image', { limits: { fileSize: 5 * 1024 * 1024 } }),
+  )
+  async uploadImage(
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File | undefined,
+    @Body() metadata: UploadTourImageDto,
+  ) {
+    return this.toursService.uploadImage(id, file, metadata.altText);
   }
 
   @Get()
@@ -52,6 +70,16 @@ export class ToursController {
     const data = await this.toursService.update(id, updateTourDto);
 
     return data;
+  }
+
+  @Delete(':tourId/images/:imageId')
+  @UseGuards(AuthGuard, RoleGuard)
+  @Roles(UserRole.ADMIN)
+  async removeImage(
+    @Param('tourId') tourId: string,
+    @Param('imageId') imageId: string,
+  ) {
+    return this.toursService.removeImage(tourId, imageId);
   }
 
   @Delete(':id')
