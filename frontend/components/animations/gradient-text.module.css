@@ -1,0 +1,24 @@
+.text {
+  display: inline;
+  background-image: linear-gradient(100deg, #2869bd, #2184a4, #2869bd);
+  background-size: 250% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  animation: gradient-shift 9s ease-in-out infinite alternate;
+}
+
+@keyframes gradient-shift {
+  from {
+    background-position: 0% 50%;
+  }
+  to {
+    background-position: 100% 50%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .text {
+    animation: none;
+  }
+}
