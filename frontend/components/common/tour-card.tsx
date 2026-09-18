@@ -23,7 +23,7 @@ export function TourCard({ tour }: { tour: Tour }) {
         href={`/tours/${encodeURIComponent(tour.slug)}`}
         className="block rounded-2xl focus-visible:outline-offset-[-3px]"
       >
-        <div className="relative aspect-[4/3] overflow-hidden">
+        <div className="relative aspect-4/3 overflow-hidden">
           <TourImage image={getTourCover(tour)} title={tour.title} />
         </div>
         <div className="p-5 sm:p-6">
