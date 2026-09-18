@@ -28,3 +28,7 @@ export function isBooking(value: unknown): value is Booking {
     typeof booking.durationDaysSnapshot === "number"
   );
 }
+
+export function isBookings(value: unknown): value is Booking[] {
+  return Array.isArray(value) && value.every(isBooking);
+}
