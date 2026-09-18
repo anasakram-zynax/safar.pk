@@ -59,6 +59,32 @@ function CartLink({
   );
 }
 
+function BookingsLink({
+  pathname,
+  onClick,
+  mobile = false,
+}: {
+  pathname: string;
+  onClick?: () => void;
+  mobile?: boolean;
+}) {
+  const active = isActive(pathname, "/bookings");
+  return (
+    <Link
+      href="/bookings"
+      onClick={onClick}
+      aria-current={active ? "page" : undefined}
+      className={cn(
+        "inline-flex items-center rounded-md font-medium transition-colors hover:text-primary-hover",
+        mobile ? "w-full px-3 py-3 text-base" : "px-2 py-2 text-sm",
+        active ? "text-primary-hover" : "text-foreground/80",
+      )}
+    >
+      My Bookings
+    </Link>
+  );
+}
+
 export function Navbar() {
   const auth = useAuth();
   const cartCount = auth.status === "customer" ? auth.cartCount : undefined;
@@ -146,6 +172,7 @@ export function Navbar() {
           {(auth.status === "guest" || auth.status === "customer") && (
             <CartLink pathname={pathname} count={cartCount} />
           )}
+          {auth.status === "customer" && <BookingsLink pathname={pathname} />}
           {authenticated ? (
             <>
               <span
@@ -241,6 +268,13 @@ export function Navbar() {
                 <CartLink
                   pathname={pathname}
                   count={cartCount}
+                  mobile
+                  onClick={() => setMenuOpen(false)}
+                />
+              )}
+              {auth.status === "customer" && (
+                <BookingsLink
+                  pathname={pathname}
                   mobile
                   onClick={() => setMenuOpen(false)}
                 />
