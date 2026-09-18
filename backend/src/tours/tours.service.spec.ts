@@ -10,7 +10,7 @@ import { CloudinaryService } from '../cloudinary/cloudinary.service.js';
 describe('ToursService', () => {
   let service: ToursService;
   const prisma = {
-    tour: { findUnique: vi.fn(), delete: vi.fn() },
+    tour: { findUnique: vi.fn(), delete: vi.fn(), findMany: vi.fn(), count: vi.fn(), groupBy: vi.fn() },
     tourImage: { findFirst: vi.fn(), create: vi.fn(), delete: vi.fn() },
   };
   const cloudinary = { uploadTourImage: vi.fn(), deleteImage: vi.fn() };
@@ -138,6 +138,7 @@ describe('ToursService', () => {
       id: 'tour-1',
       title: 'Tour',
       images: [{ publicId: 'safar-pk/tours/image-1' }],
+      cartItems: [],
     });
     cloudinary.deleteImage.mockResolvedValue(undefined);
     prisma.tour.delete.mockResolvedValue({});
@@ -155,11 +156,41 @@ describe('ToursService', () => {
       id: 'tour-1',
       title: 'Tour',
       images: [{ publicId: 'safar-pk/tours/image-1' }],
+      cartItems: [],
     });
     cloudinary.deleteImage.mockRejectedValue(new BadGatewayException());
     await expect(service.remove('tour-1')).rejects.toBeInstanceOf(
       BadGatewayException,
     );
     expect(prisma.tour.delete).not.toHaveBeenCalled();
+  });
+
+  it('does not clean Cloudinary assets when the tour remains in a customer cart', async () => {
+    prisma.tour.findUnique.mockResolvedValue({
+      id: 'tour-1',
+      title: 'Tour',
+      images: [{ publicId: 'safar-pk/tours/image-1' }],
+      cartItems: [{ id: 'cart-item-1' }],
+    });
+    await expect(service.remove('tour-1')).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    expect(cloudinary.deleteImage).not.toHaveBeenCalled();
+    expect(prisma.tour.delete).not.toHaveBeenCalled();
+  });
+
+  it('returns all statuses and a global status summary for administrators', async () => {
+    prisma.tour.findMany.mockResolvedValue([{ id: 'tour-1' }]);
+    prisma.tour.count.mockResolvedValue(1);
+    prisma.tour.groupBy.mockResolvedValue([
+      { status: 'PUBLISHED', _count: { _all: 2 } },
+      { status: 'DRAFT', _count: { _all: 1 } },
+      { status: 'ARCHIVED', _count: { _all: 3 } },
+    ]);
+    await expect(service.findAllForAdmin({ page: 1, limit: 10 })).resolves.toMatchObject({
+      tours: [{ id: 'tour-1' }],
+      pagination: { total: 1 },
+      summary: { total: 6, published: 2, draft: 1, archived: 3 },
+    });
   });
 });

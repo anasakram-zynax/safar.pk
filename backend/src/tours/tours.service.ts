@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import { CreateTourDto } from './dto/create-tour.dto.js';
 import { generateSlug } from './utils/slug.utils.js';
 import { TourQueryDto } from './dto/tour-query.dto.js';
+import { AdminTourQueryDto } from './dto/admin-tour-query.dto.js';
 import { Prisma, TourStatus } from '@prisma/client';
 import { UpdateTourDto } from './dto/update-tour.dto.js';
 import { CloudinaryService } from '../cloudinary/cloudinary.service.js';
@@ -330,6 +331,85 @@ export class ToursService {
     };
   }
 
+  async reorderImages(tourId: string, imageIds: string[]) {
+    if (new Set(imageIds).size !== imageIds.length) throw new BadRequestException('Image IDs must be unique.');
+    const tour = await this.prisma.tour.findUnique({ where: { id: tourId }, select: { id: true, images: { select: { id: true } } } });
+    if (!tour) throw new NotFoundException('Tour not found.');
+    const existingIds = new Set(tour.images.map((image) => image.id));
+    if (imageIds.length !== existingIds.size || imageIds.some((id) => !existingIds.has(id))) throw new BadRequestException('Image IDs must match this tour images.');
+    await this.prisma.$transaction(imageIds.map((id, sortOrder) => this.prisma.tourImage.update({ where: { id }, data: { sortOrder } })));
+    return this.findOneForAdmin(tourId);
+  }
+
+  async updateImageAltText(tourId: string, imageId: string, altText?: string) {
+    const image = await this.prisma.tourImage.findFirst({ where: { id: imageId, tourId }, select: { id: true } });
+    if (!image) throw new NotFoundException('Tour image not found.');
+    return this.prisma.tourImage.update({ where: { id: image.id }, data: { altText: altText?.trim() || null } });
+  }
+
+  async findAllForAdmin(query: AdminTourQueryDto) {
+    const { search, status, page = 1, limit = 10 } = query;
+    const where: Prisma.TourWhereInput = {
+      ...(status && { status }),
+      ...(search && {
+        OR: [
+          { title: { contains: search, mode: 'insensitive' } },
+          { location: { contains: search, mode: 'insensitive' } },
+        ],
+      }),
+    };
+    const [tours, total, statusGroups] = await Promise.all([
+      this.prisma.tour.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+        include: {
+          images: { orderBy: { sortOrder: 'asc' } },
+          tags: { include: { tag: true } },
+        },
+      }),
+      this.prisma.tour.count({ where }),
+      this.prisma.tour.groupBy({ by: ['status'], _count: { _all: true } }),
+    ]);
+    const summary = {
+      total: 0,
+      published: 0,
+      draft: 0,
+      archived: 0,
+    };
+    for (const group of statusGroups) {
+      summary.total += group._count._all;
+      if (group.status === TourStatus.PUBLISHED) summary.published = group._count._all;
+      if (group.status === TourStatus.DRAFT) summary.draft = group._count._all;
+      if (group.status === TourStatus.ARCHIVED) summary.archived = group._count._all;
+    }
+    return {
+      tours,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+        hasNextPage: page * limit < total,
+        hasPreviousPage: page > 1,
+      },
+      summary,
+    };
+  }
+
+  async findOneForAdmin(id: string) {
+    const tour = await this.prisma.tour.findUnique({
+      where: { id },
+      include: {
+        images: { orderBy: { sortOrder: 'asc' } },
+        tags: { include: { tag: true } },
+      },
+    });
+    if (!tour) throw new NotFoundException('Tour not found.');
+    return tour;
+  }
+
   private getOrderBy(sort?: string): Prisma.TourOrderByWithRelationInput {
     switch (sort) {
       case 'price_asc':
@@ -481,11 +561,18 @@ export class ToursService {
         id: true,
         title: true,
         images: { select: { publicId: true } },
+        cartItems: { select: { id: true } },
       },
     });
 
     if (!tour) {
       throw new NotFoundException('Tour not found.');
+    }
+
+    if (tour.cartItems.length > 0) {
+      throw new BadRequestException(
+        'Tour cannot be deleted while it is in a customer cart.',
+      );
     }
 
     for (const image of tour.images) {
