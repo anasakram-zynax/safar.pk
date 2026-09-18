@@ -15,14 +15,16 @@ async function bootstrap() {
     origin: frontendUrl,
     credentials: true,
   });
-  app.setGlobalPrefix('api')
+  app.setGlobalPrefix('api');
 
-  app.useGlobalPipes(new ValidationPipe({
-    whitelist: true,
-    forbidNonWhitelisted: true,
-    transform: true
-  }))
-  app.useGlobalInterceptors(new TransformInterceptor())
-  await app.listen(port);
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  );
+  app.useGlobalInterceptors(new TransformInterceptor());
+  await app.listen(port, '0.0.0.0');
 }
 await bootstrap();
